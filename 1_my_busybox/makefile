@@ -1,7 +1,7 @@
 
 
 CC = gcc
-CFLAGS = -Wall -Wextra -ggdb
+CFLAGS = -Wall -Wextra -Wpedantic -ggdb -fsanitize=address,undefined
 
 all: mygrep mychmod mycat myls
 
@@ -12,7 +12,7 @@ mychmod: chmod/mychmod.o
 mycat: cat/mycat.o
 	$(CC) $(CFLAGS) cat/mycat.o -o mycat
 myls: ls/myls.o
-	$(CC) $(CFLAGS) ls/myls.o -o myls
+	$(CC) $(CFLAGS) ls/myls.o -lm -o myls
 
 grep/mygrep.o: grep/main.c
 	$(CC) $(CFLAGS) grep/main.c -c -o grep/mygrep.o
@@ -27,8 +27,8 @@ ls/myls.o: ls/main.c
 	$(CC) $(CFLAGS) ls/main.c -c -o ls/myls.o
 
 clean:
-	rm mygrep mychmod mycat
-	rm grep/mygre.o
-	rm chmod/mychmod.o
-	rm cat/mycat.o
-	rm ls/myls.o
+	rm -f ./mygrep ./mychmod ./mycat
+	rm -f ./grep/mygrep.o
+	rm -f ./chmod/mychmod.o
+	rm -f ./cat/mycat.o
+	rm -f ./ls/myls.o
