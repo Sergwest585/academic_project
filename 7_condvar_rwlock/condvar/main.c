@@ -32,7 +32,7 @@ static void *writer_thread(void *arg) {
    int len = snprintf(start, sizeof(start)/sizeof(*start), "[WRITER     tid=%lu] launch\n", (unsigned long)pthread_self());
    write(STDOUT_FILENO, start, (size_t)len);
 
-   for (unsigned long i = 0; i < WRITES_TOTAL; ++i) {
+   for (unsigned long i = 1; i <= WRITES_TOTAL; ++i) {
       char tmp_arr[ARR_LEN] = {0};
       int len = snprintf(tmp_arr, sizeof(tmp_arr)/sizeof(*tmp_arr), "num: %lu was sended", i);
       if (len < 0) len = 0;
