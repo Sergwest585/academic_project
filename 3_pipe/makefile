@@ -16,3 +16,4 @@ fifo/fifo_example.o: fifo/main.c
 clean:
 	rm -f pipe_example pipe/pipe_example.o
 	rm -f fifo_example fifo/fifo_example.o
+	rm -f fifo_file
