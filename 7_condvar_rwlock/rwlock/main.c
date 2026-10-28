@@ -31,7 +31,7 @@ static void *writer_thread(void *arg) {
    int len = snprintf(start, sizeof(start)/sizeof(*start), "[WRITER     tid=%lu] launch\n", (unsigned long)pthread_self());
    write(STDOUT_FILENO, start, (size_t)len);
 
-   for (unsigned long i = 0; i < WRITES_TOTAL; ++i) {
+   for (unsigned long i = 1; i <= WRITES_TOTAL; ++i) {
       char tmp_arr[ARR_LEN] = {0};
       int len = snprintf(tmp_arr, sizeof(tmp_arr)/sizeof(*tmp_arr), "num: %lu was sended", i);
       if (len < 0) len = 0;
@@ -72,6 +72,12 @@ static void *reader_thread(void *arg) {
          break;
       }
 
+      if (global_counter == last_seen) {
+         pthread_rwlock_unlock(&rwlock);
+         _usleep(READER_PERIOD);
+         continue;
+      }
+
       last_seen = global_counter;
 
       char local_arr[ARR_LEN] = {0};
@@ -85,8 +91,6 @@ static void *reader_thread(void *arg) {
                          id, (unsigned long)pthread_self(),
                          counter, ARR_LEN, local_arr);
       write(STDOUT_FILENO, out, (size_t)len);
-
-      _usleep(READER_PERIOD);
    }
 
    char bye[96] = {0};
