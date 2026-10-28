@@ -36,7 +36,7 @@ static int run_writer(void) {
       return EXIT_FAILURE;
    }
 
-   sleep(8);
+   sleep(13);
 
    ssize_t total = 0;
    while (total < len) {
