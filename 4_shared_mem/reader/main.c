@@ -44,7 +44,7 @@ int main(void) {
       }
       
       if (data->msg_id == last_msg_id) {
-         usleep(1000);
+         sleep(1);
          continue;
       }
 

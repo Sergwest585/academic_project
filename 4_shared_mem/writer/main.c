@@ -16,10 +16,15 @@
 static struct data_payload *shm_data = NULL;
 
 static void cleanup_and_exit(int code) {
+   int shm_pid = 0;
    if (shm_data) {
+      shm_pid = shm_data->writer_pid;
       shm_data->writer_pid = 0;
+      munmap(shm_data, sizeof(*shm_data));
    }
-   if (shm_data) munmap(shm_data, sizeof(*shm_data));
+   if (shm_pid == (int)getpid()) {
+      shm_unlink(SHM_NAME);
+   }
    _exit(code);
 }
 
