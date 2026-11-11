@@ -12,20 +12,13 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <semaphore.h>
 
 static struct data_payload *shm_data = NULL;
-static        sem_t        *lock_sem = NULL;
-static        sem_t        *data_sem = NULL;
 
 static void cleanup_and_exit(int code) {
    if (shm_data) {
-      sem_wait(lock_sem);
       shm_data->writer_pid = 0;
-      sem_post(lock_sem);
    }
-   if (data_sem) sem_close(data_sem);
-   if (lock_sem) sem_close(lock_sem);
    if (shm_data) munmap(shm_data, sizeof(*shm_data));
    _exit(code);
 }
@@ -44,18 +37,6 @@ static int is_alive(int pid) {
 }
 
 int main(void) {
-   lock_sem = sem_open(SEM_LOCK_NAME, O_CREAT, 0666, 1);
-   if (lock_sem == SEM_FAILED) {
-      perror("sem_open lock");
-      return EXIT_FAILURE;
-   }
-   data_sem = sem_open(SEM_DATA_NAME, O_CREAT, 0666, 0);
-   if (data_sem == SEM_FAILED) {
-      perror("sem_open data");
-      sem_close(lock_sem);
-      return EXIT_FAILURE;
-   }
-
    int fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
    if (fd == -1) {
       perror("shm_open");
@@ -75,14 +56,11 @@ int main(void) {
    close(fd);
    shm_data = p;
 
-   sem_wait(lock_sem);
-
    int prev = shm_data->writer_pid;
    if (is_alive(prev)) {
       char buf[128] = {0};
       int len = snprintf(buf, sizeof(buf),"[WRITER] already running: PID=%d\n", prev);
       write(STDOUT_FILENO, buf, (size_t)len);
-      sem_post(lock_sem);
       cleanup_and_exit(EXIT_FAILURE);
    }
 
@@ -90,8 +68,6 @@ int main(void) {
    shm_data->msg_id = 0;
    memset(shm_data->time_str, 0, sizeof(shm_data->time_str));
    memset(shm_data->message,  0, sizeof(shm_data->message));
-
-   sem_post(lock_sem);
 
    if (signal(SIGINT,  on_signal) == SIG_ERR) perror("signal SIGINT");
    if (signal(SIGTERM, on_signal) == SIG_ERR) perror("signal SIGTERM");
@@ -109,14 +85,10 @@ int main(void) {
                         "time=%s; PID=%d",
                         time_buf, (int)getpid());
 
-      sem_wait(lock_sem);
       shm_data->writer_pid = (int)getpid();
       shm_data->msg_id++;
       memcpy(shm_data->time_str, time_buf, sizeof(shm_data->time_str));
       memcpy(shm_data->message,  msg_buf,  sizeof(shm_data->message));
-      sem_post(lock_sem);
-
-      sem_post(data_sem);
 
       sleep(1);
    }
