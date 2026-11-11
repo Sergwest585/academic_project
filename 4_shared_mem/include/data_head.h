@@ -6,8 +6,6 @@
 
 #define NAMESPACE       "/sergk_shr4_"
 #define SHM_NAME        NAMESPACE"shared_mem"
-#define SEM_LOCK_NAME   NAMESPACE"shared_lock"
-#define SEM_DATA_NAME   NAMESPACE"shared_data"
 
 #define MSG_LEN         256
 #define TIME_LEN        64
