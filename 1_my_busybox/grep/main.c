@@ -5,6 +5,9 @@
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/vfs.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define and &&
 #define or  ||
@@ -57,14 +60,58 @@ bool line_matches(const char *line, const char *pattern, bool ignore_case) {
    return false;
 }
 
-long grep_stream(FILE *fp, const char *pattern, struct Opts opts) {
+size_t _getline(char **lineptr, size_t *n, int fd) {
+   if (lineptr == NULL || n == NULL) {
+      errno = EINVAL;
+      return -1;
+   }
+
+   if (*lineptr == NULL || *n == 0) {
+      *n = 128;
+      *lineptr = malloc(*n);
+      if (*lineptr == NULL) {
+         return -1;
+      }
+   }
+
+   size_t pos = 0;
+   while (1) {
+      char c;
+      ssize_t bytes_read = read(fd, &c, 1);
+      if (bytes_read < 0) {
+         if (errno == EINTR) continue;
+         return -1;
+      } else if (bytes_read == 0) {
+         if (pos == 0) return -1;
+         break;
+      }
+
+      if (pos + 1 >= *n) {
+         *n *= 2;
+         char *new_ptr = realloc(*lineptr, *n);
+         if (new_ptr == NULL) {
+            return -1;
+         }
+         *lineptr = new_ptr;
+      }
+
+      (*lineptr)[pos++] = c;
+
+      if (c == '\n') break;
+   }
+
+   (*lineptr)[pos] = '\0';
+   return pos;
+}
+
+long grep_stream(int fd, const char *pattern, struct Opts opts) {
    char *line = NULL;
    size_t cap = 0;
    ssize_t len;
    long line_no = 0;
    long matches = 0;
 
-   while ((len = getline(&line, &cap, fp)) != -1) {
+   while ((len = _getline(&line, &cap, fd)) != -1) {
       ++line_no;
 
       bool had_nl = (len > 0 and line[len-1] == '\n');
@@ -76,7 +123,7 @@ long grep_stream(FILE *fp, const char *pattern, struct Opts opts) {
       if (m) {
          ++matches;
          if (opts.line_number) {
-               printf("%ld:", line_no);
+            printf("%ld:", line_no);
          }
          fputs(line, stdout);
          if (had_nl) putchar('\n');
@@ -102,20 +149,20 @@ int main(int argc, char** argv) {
    while ((opt = getopt_long(argc, argv, "hivn", options, NULL)) != -1) {
       switch (opt) {
          case 'h':
-               printf("%s", help_message);
-               return 0;
+            printf("%s", help_message);
+            return 0;
          case 'i':
-               opts.ignore_case = true;
-               break;
+            opts.ignore_case = true;
+            break;
          case 'v':
-               opts.invert = true;
-               break;
+            opts.invert = true;
+            break;
          case 'n':
-               opts.line_number = true;
-               break;
+            opts.line_number = true;
+            break;
          default:
-               fprintf(stderr, "%s", help_message);
-               return 1;
+            fprintf(stderr, "%s", help_message);
+            return 1;
       }
    }
 
@@ -128,18 +175,18 @@ int main(int argc, char** argv) {
    long total_matches = 0;
 
    if (optind >= argc) {
-      total_matches = grep_stream(stdin, pattern, opts);
+      total_matches = grep_stream(STDIN_FILENO, pattern, opts);
    } else {
       for (int i = optind; i < argc; ++i) {
-         FILE *fp = fopen(argv[i], "r");
-         if (not fp) {
-               fprintf(stderr, "mygrep: %s: %s\n", argv[i], strerror(errno));
-               return 2;
+         int fd = open(argv[i], O_RDONLY);
+         if (not fd) {
+            fprintf(stderr, "mygrep: %s: %s\n", argv[i], strerror(errno));
+            return 2;
          }
-         total_matches += grep_stream(fp, pattern, opts);
-         fclose(fp);
+         total_matches += grep_stream(fd, pattern, opts);
+         close(fd);
       }
    }
 
-   return total_matches > 0 ? 0 : 1;
+   return total_matches > 0;
 }

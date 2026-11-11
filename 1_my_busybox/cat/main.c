@@ -164,6 +164,7 @@ void write_fds(int fd, struct Opts opts) {
 
       if (need_number) {
          printf("%6u\t", ++line_no);
+         fflush(stdout);
       }
 
       if (opts.show_ends) {
@@ -220,8 +221,9 @@ int main(int argc, char** argv) {
    }
 
    if (optind >= argc) {
-      if (not opts.number and not opts.number_nonblank and not opts.show_ends) splice_fds(STDIN_FILENO, STDOUT_FILENO, SIZE_MAX);
-      else write_fds(STDIN_FILENO, opts);
+      // if (not opts.number and not opts.number_nonblank and not opts.show_ends) splice_fds(STDIN_FILENO, STDOUT_FILENO, SIZE_MAX);
+      // else 
+      write_fds(STDIN_FILENO, opts);
    } else {
       for (int i = optind; i < argc; ++i) {
          int fd = open(argv[i], O_RDONLY);
@@ -229,11 +231,11 @@ int main(int argc, char** argv) {
             perror("mycat open");
             return 2;
          }
-         if (not opts.number and not opts.number_nonblank and not opts.show_ends) {
-            splice_fds(STDIN_FILENO, STDOUT_FILENO, SIZE_MAX);
-         } else {
+         // if (not opts.number and not opts.number_nonblank and not opts.show_ends) {
+         //    splice_fds(STDIN_FILENO, STDOUT_FILENO, SIZE_MAX);
+         // } else {
             write_fds(fd, opts);
-         }
+         // }
          close(fd);
       }
    }
